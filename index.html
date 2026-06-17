@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ブラウザで動く Python エディタ</title>
+    <!-- Pyodideの読み込み（最新のCDNを使用） -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 24px;
+            color: #2c3e50;
+        }
+        #status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            background-color: #ffeaa7;
+            color: #d63031;
+        }
+        #status.ready {
+            background-color: #badc58;
+            color: #6ab04c;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .output-box {
+            margin-top: 20px;
+        }
+        .output-box h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        pre {
+            background-color: #2d3436;
+            color: #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 50px;
+            margin: 0;
+        }
+        .error {
+            color: #ff7675 !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Python オンライン実行環境</h1>
+    
+    <!-- 初期化ステータス表示 -->
+    <div id="status">Pyodide環境を初期化中...（しばらくお待ちください）</div>
+
+    <!-- コード入力エリア -->
+    <textarea id="code" placeholder="ここにPythonコードを書いてください..."># サンプルコード
+def greet(name):
+    return f"こんにちは、{name}さん！"
+
+print("プログラムを開始します。")
+for i in range(3):
+    print(f"ループ回数: {i+1}")
+
+result = greet("ユーザー")
+print(result)
+</textarea>
+
+    <!-- 実行ボタン -->
+    <button id="run-btn" onclick="runPython()" disabled>実行する</button>
+
+    <!-- 結果表示エリア -->
+    <div class="output-box">
+        <h2>実行結果 (コンソール出力)</h2>
+        <pre id="output">ここに実行結果が表示されます。</pre>
+    </div>
+</div>
+
+<script>
+    let pyodide;
+    const statusDiv = document.getElementById('status');
+    const runBtn = document.getElementById('run-btn');
+    const outputPre = document.getElementById('output');
+    const codeArea = document.getElementById('code');
+
+    // 1. ページ読み込み時にPyodideを初期化
+    async function initPyodide() {
+        try {
+            pyodide = await loadPyodide();
+            
+            // ステータスを準備完了に変更
+            statusDiv.textContent = '準備完了！Pythonを実行できます。';
+            statusDiv.classList.add('ready');
+            runBtn.disabled = false;
+        } catch (err) {
+            statusDiv.textContent = '初期化に失敗しました。再読み込みしてください。';
+            console.error(err);
+        }
+    }
+
+    // 2. Pythonコードの実行処理
+    async function runPython() {
+        if (!pyodide) return;
+
+        const code = codeArea.value;
+        outputPre.textContent = "実行中...";
+        outputPre.classList.remove('error');
+
+        // Pythonの標準出力をキャプチャするためのバッファ
+        let outputBuffer = "";
+        pyodide.setStdout({
+            batched: (text) => {
+                outputBuffer += text + "\n";
+            }
+        });
+        pyodide.setStderr({
+            batched: (text) => {
+                outputBuffer += text + "\n";
+            }
+        });
+
+        try {
+            // Pythonコードの実行
+            await pyodide.runPythonAsync(code);
+            
+            // 出力結果を画面に反映（何も出力がなければメッセージを出す）
+            outputPre.textContent = outputBuffer || "（コードは正常に実行されましたが、何も出力されませんでした）";
+        } catch (err) {
+            // エラーが発生した場合は赤字で表示
+            outputPre.textContent = `エラーが発生しました:\n${err.message}`;
+            outputPre.classList.add('error');
+        }
+    }
+
+    // 初期化関数を実行
+    initPyodide();
+</script>
+
+</body>
+</html>
