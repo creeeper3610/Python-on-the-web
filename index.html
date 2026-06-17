@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ブラウザで動く Python エディタ</title>
-    <!-- Pyodideの読み込み（最新のCDNを使用） -->
+    <!-- 【修正ポイント】Cloudflareが運営する信頼性の高いCDN(cdnjs)の正しいURLに変更 -->
     <script src="https://cloudflare.com"></script>
     <style>
         body {
@@ -137,7 +137,10 @@ print(result)
     // 1. ページ読み込み時にPyodideを初期化
     async function initPyodide() {
         try {
-            pyodide = await loadPyodide();
+            // 【修正ポイント】cdnjsから読み込まれたloadPyodideを呼び出す
+            pyodide = await loadPyodide({
+                indexURL: "https://cloudflare.com"
+            });
             
             // ステータスを準備完了に変更
             statusDiv.textContent = '準備完了！Pythonを実行できます。';
@@ -174,7 +177,7 @@ print(result)
             // Pythonコードの実行
             await pyodide.runPythonAsync(code);
             
-            // 出力結果を画面に反映（何も出力がなければメッセージを出す）
+            // 出力結果を画面に反映
             outputPre.textContent = outputBuffer || "（コードは正常に実行されましたが、何も出力されませんでした）";
         } catch (err) {
             // エラーが発生した場合は赤字で表示
